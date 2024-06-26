@@ -5,6 +5,17 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.c"
+
+
+
+
+uint64 sys_trace(void){
+  int n;
+  argint(0, &n);
+  myproc()->tracemask = n;
+  return 0;
+}
 
 uint64
 sys_exit(void)

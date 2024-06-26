@@ -26,6 +26,18 @@ extern char trampoline[]; // trampoline.S
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
 
+
+uint64 proc_count(){
+  struct proc *p;
+  uint64 ret = 0;
+  for(p = proc; p < &proc[NPROC]; p++) {
+      if(p->state != UNUSED){
+          ret++;
+      }
+  }
+  return ret;
+}
+
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
 // guard page.
@@ -101,6 +113,7 @@ allocpid()
 
   return pid;
 }
+
 
 // Look in the process table for an UNUSED proc.
 // If found, initialize state required to run in the kernel,
@@ -298,6 +311,9 @@ fork(void)
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
+
+  // let the child has the same trace mask
+  np->tracemask = p->tracemask;
 
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
