@@ -70,14 +70,33 @@ sys_sleep(void)
 }
 
 
-#ifdef LAB_PGTBL
+// #ifdef LAB_PGTBL
 int
 sys_pgaccess(void)
 {
-  // lab pgtbl: your code here.
+  pagetable_t pagetable = myproc()->pagetable;
+  uint64 ret = 0;
+  uint64 va;
+  int num;
+  uint64 addr;
+  vmprint(pagetable);
+  argaddr(0, &va);
+  argint(1, &num);
+  argaddr(2, &addr);
+  for(int i = 0; i < num; i++){
+    pte_t* pte = walk(pagetable, va + i * PGSIZE, 0);
+    if(*pte & (1 << 6)){
+      ret |= (1 << i);
+      *pte ^= (1 << 6);
+    }
+  }
+  struct proc *p = myproc();
+  if(copyout(p->pagetable, addr, (char*)&ret, sizeof(ret)) < 0){
+    return -1;
+  }
   return 0;
 }
-#endif
+// #endif
 
 uint64
 sys_kill(void)
