@@ -124,6 +124,11 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  
+  p->cnt = 0;
+  p->ticks = 0;
+  p->handler = 0;
+  p->handling = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -295,7 +300,6 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
-
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
 
@@ -311,6 +315,7 @@ fork(void)
   safestrcpy(np->name, p->name, sizeof(p->name));
 
   pid = np->pid;
+
 
   release(&np->lock);
 

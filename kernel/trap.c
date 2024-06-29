@@ -37,7 +37,6 @@ void
 usertrap(void)
 {
   int which_dev = 0;
-
   if((r_sstatus() & SSTATUS_SPP) != 0)
     panic("usertrap: not from user mode");
 
@@ -49,7 +48,7 @@ usertrap(void)
   
   // save user program counter.
   p->trapframe->epc = r_sepc();
-  
+
   if(r_scause() == 8){
     // system call
 
@@ -63,11 +62,26 @@ usertrap(void)
     // an interrupt will change sepc, scause, and sstatus,
     // so enable only now that we're done with those registers.
     intr_on();
-
     syscall();
   } else if((which_dev = devintr()) != 0){
+    if(myproc()->ticks == -1){
+        goto yield;
+    }
+    if(which_dev == 2 && myproc()->ticks){
+      // printf("%d", myproc()->ticks);
+      myproc()->cnt++;
+      if(myproc()->cnt == myproc()->ticks && !myproc()->handling){
+        myproc()->cnt = 0;
+        // printf("%d\n", myproc()->trapframe->a0);
+        memmove(myproc()->bk, myproc()->trapframe, sizeof(myproc()->bk));
+        myproc()->handling = 1;
+        myproc()->trapframe->epc = (uint64)(myproc()->handler);
+        // ((void(*)(void))(myproc()->handler))();
+      }
+    }
     // ok
   } else {
+
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     setkilled(p);
@@ -77,7 +91,10 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2){
+    yield();
+  }
+  yield:
     yield();
 
   usertrapret();
@@ -149,7 +166,6 @@ kerneltrap()
     printf("sepc=%p stval=%p\n", r_sepc(), r_stval());
     panic("kerneltrap");
   }
-
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
     yield();
